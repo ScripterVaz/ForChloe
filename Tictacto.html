@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>You think u can beat me?</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background-color: #0d0d1a;
+      color: white;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .floating-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .floating-bg span {
+      position: absolute;
+      font-size: 3rem;
+      font-weight: bold;
+      color: #1a75ff;
+      text-shadow: 0 0 10px #1a75ff, 0 0 20px #00ccff;
+      animation: floatText 10s linear infinite;
+    }
+
+    @keyframes floatText {
+      0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-10vh) translateX(20px);
+        opacity: 0;
+      }
+    }
+
+    h1 {
+      text-align: center;
+      margin: 20px;
+      text-shadow: 0 0 15px #00ccff;
+      color: #00ccff;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 15px;
+      justify-content: center;
+      margin-top: 50px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: rgba(0, 0, 50, 0.4);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 0 12px #1a75ff, 0 0 20px rgba(0, 204, 255, 0.3);
+    }
+
+    .cell:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 20px #00ccff, 0 0 30px #00ffff;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 1.2rem;
+      color: #00ffff;
+    }
+
+    .rematch-btn {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: #0d0d1a;
+      background: #00ccff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00ccff, 0 0 20px #00ffff;
+      transition: transform 0.2s ease;
+    }
+
+    .rematch-btn:hover {
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="floating-bg">
+    <!-- Generate multiple C+V spans at random positions -->
+    <script>
+      for (let i = 0; i < 40; i++) {
+        const span = document.createElement('span');
+        span.textContent = 'C + V';
+        span.style.left = `${Math.random() * 100}vw`;
+        span.style.top = `${Math.random() * 100}vh`;
+        span.style.animationDuration = `${8 + Math.random() * 5}s`;
+        document.currentScript.parentElement.appendChild(span);
+      }
+    </script>
+  </div>
+
+  <h1>You think u can beat me?</h1>
+  <div class="board" id="board"></div>
+  <div class="message" id="message"></div>
+  <button class="rematch-btn" onclick="startGame()">Rematch</button>
+
+  <script>
+    const board = document.getElementById('board');
+    const message = document.getElementById('message');
+    let cells = [];
+    let gameOver = false;
+
+    function startGame() {
+      board.innerHTML = '';
+      message.textContent = '';
+      gameOver = false;
+      cells = Array(9).fill(null);
+
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.addEventListener('click', () => playerMove(i));
+        board.appendChild(cell);
+      }
+    }
+
+    function playerMove(index) {
+      if (cells[index] || gameOver) return;
+      cells[index] = 'X';
+      updateBoard();
+      if (checkWin('X')) {
+        message.textContent = 'Fine… send me a screenshot of proof you won for bicep pic.';
+        gameOver = true;
+        return;
+      }
+      if (cells.every(cell => cell)) {
+        message.textContent = 'It\'s a draw!';
+        gameOver = true;
+        return;
+      }
+      setTimeout(aiMove, 750);
+    }
+
+    function aiMove() {
+      if (gameOver) return;
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < 9; i++) {
+        if (!cells[i]) {
+          cells[i] = 'O';
+          let score = minimax(cells, 0, false);
+          cells[i] = null;
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      cells[move] = 'O';
+      updateBoard();
+      if (checkWin('O')) {
+        message.textContent = 'You owe me a kiss.';
+        gameOver = true;
+      } else if (cells.every(cell => cell)) {
+        message.textContent = 'It\'s a draw!';
+        gameOver = true;
+      }
+    }
+
+    function minimax(boardState, depth, isMaximizing) {
+      if (checkWinFor('O', boardState)) return 1;
+      if (checkWinFor('X', boardState)) return -1;
+      if (boardState.every(cell => cell)) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (!boardState[i]) {
+            boardState[i] = 'O';
+            let score = minimax(boardState, depth + 1, false);
+            boardState[i] = null;
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (!boardState[i]) {
+            boardState[i] = 'X';
+            let score = minimax(boardState, depth + 1, true);
+            boardState[i] = null;
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    function checkWin(player) {
+      return checkWinFor(player, cells);
+    }
+
+    function checkWinFor(player, state) {
+      const winPatterns = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      return winPatterns.some(pattern => pattern.every(index => state[index] === player));
+    }
+
+    function updateBoard() {
+      document.querySelectorAll('.cell').forEach((cellDiv, i) => {
+        cellDiv.textContent = cells[i] || '';
+      });
+    }
+
+    startGame();
+  </script>
+</body>
+</html>
